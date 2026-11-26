@@ -1,0 +1,12 @@
+# Production release checklist
+
+The current build is for local review. Release requires an explicit approval to deploy.
+
+- [ ] Confirm the production domain, then set `CIVIL_SITE_URL` to the approved HTTPS origin at build time. Keep `CIVIL_ALLOW_INDEXING=false` on staging. Enable it for the approved public release, rebuild, and check the canonical, OG image URL, robots and sitemap on the deployed host.
+- [ ] Confirm current Civil Module syllabus and publication wording. Approve the classroom photo usage, original mark, external programme testimonial and admissions contact information.
+- [ ] Confirm any batch dates, hours, duration, fee, mode, language and faculty before adding them to the page. The current course is configured for admission enquiries.
+- [ ] Provision the Civil-only HTTPS intake and configure `LEAD_MODE=webhook`, `CIVIL_LEAD_WEBHOOK_URL`, `CIVIL_LEAD_WEBHOOK_TOKEN` and a random `CIVIL_LEAD_IDEMPOTENCY_SECRET` of at least 32 characters. Keep these server-side and confirm receiver ownership, access and lead retention.
+- [ ] Test the receiver with an isolated endpoint. It must durably accept the JSON before returning a 2xx JSON receipt shaped as `{ "accepted": true, "courseId": "civil-procedure-civil-trial", "id": "opaque-receipt", "created": true }`. Use the supplied `Idempotency-Key` to enforce a durable, rolling 24-hour duplicate window and return the original receipt with `created: false`. Exercise upstream timeouts and repeat requests in the isolated environment.
+- [ ] Configure the edge to strip inbound copies of the trusted client-IP header and replace it from the connection. Set the header name in `CIVIL_TRUSTED_IP_HEADER`. Apply a shared edge rate limit to `POST /api/enquiry` when using multiple replicas. The built-in production backstop counts attempts per IP per process and groups requests without a trusted IP.
+- [ ] Approve the lead handling and applicable consent settings. Keep GA4, GTM and Meta disabled until their IDs and payload policies are approved. Choose GTM as the sole dispatcher if using a container. Use Manual GA4/Meta conversion triggers for confirmed `form_submit_success` and disable vendor settings that also auto-track the form. Review page URL collection, user-provided data and consent settings in the vendor interfaces.
+- [ ] Run the release build, verify cross-browser behaviour on the staging host and test ad attribution with synthetic records. Measure production performance and monitor field Core Web Vitals after the public launch.

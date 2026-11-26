@@ -1,0 +1,23 @@
+:root {
+  --vls-red: #B20A0A;
+  --vls-ink: #111315;
+  --vls-white: #FFFFFF;
+  --vls-paper: #F5F1E9;
+  --vls-paper-deep: #EBE3D6;
+  --vls-dark: #0D1012;
+  --vls-footer: #0B0D0F;
+  --vls-border: #DED7CC;
+  --vls-muted: #6B6964;
+  --vls-gold: #C39A59;
+  --vls-whatsapp: #25D366;
+  --vls-red-hover: color-mix(in srgb, var(--vls-red) 77%, var(--vls-ink));
+  --vls-pale-text: color-mix(in srgb, var(--vls-white) 80%, var(--vls-dark));
+  --vls-field-border: color-mix(in srgb, var(--vls-muted) 82%, var(--vls-border));
+  --vls-footer-border: color-mix(in srgb, var(--vls-white) 23%, var(--vls-footer));
+  --font-editorial: Georgia, "Times New Roman", serif;
+  --font-ui: "Inter Variable", Inter, system-ui, sans-serif;
+  --motion-ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --header-height: 64px;
+  --container-width: 1180px;
+  --gutter: clamp(20px, 5vw, 56px);
+}

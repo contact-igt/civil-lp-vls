@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import { course, description, title } from '../lib/course';
 import { indexable, siteUrl } from '../lib/site';
 import '@fontsource-variable/inter/wght.css';
@@ -18,5 +19,41 @@ export const metadata: Metadata = {
 export const viewport: Viewport = { width: 'device-width', initialScale: 1, viewportFit: 'cover' };
 
 export default function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="en-IN"><body>{children}</body></html>;
+  return (
+    <html lang="en-IN">
+      <body>
+        <Script id="meta-pixel" strategy="afterInteractive">{`
+          !function(f,b,e,v,n,t,s) {
+            if (f.fbq) return;
+            n = f.fbq = function() {
+              n.callMethod ? n.callMethod.apply(n, arguments) : n.queue.push(arguments);
+            };
+            if (!f._fbq) f._fbq = n;
+            n.push = n;
+            n.loaded = true;
+            n.version = '2.0';
+            n.queue = [];
+            t = b.createElement(e);
+            t.async = true;
+            t.src = v;
+            s = b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t, s);
+          }(window, document, 'script', 'https://connect.facebook.net/en_US/fbevents.js');
+          fbq('init', '1320569916265124');
+          fbq('track', 'PageView');
+        `}</Script>
+        <noscript>
+          {/* eslint-disable-next-line @next/next/no-img-element -- Meta requires a direct tracking request. */}
+          <img
+            alt=""
+            height={1}
+            width={1}
+            style={{ display: 'none' }}
+            src="https://www.facebook.com/tr?id=1320569916265124&ev=PageView&noscript=1"
+          />
+        </noscript>
+        {children}
+      </body>
+    </html>
+  );
 }

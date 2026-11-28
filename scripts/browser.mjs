@@ -19,9 +19,11 @@ const requested = (process.env.CIVIL_QA_BROWSERS ?? 'chromium,webkit,firefox').s
 const nextFrame = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 const noAnalyticsPII = data => !/QA Browser|example\.test|987654|QA City/.test(JSON.stringify(data));
 const eventList = page => page.evaluate(() => window.dataLayer ?? []);
+const pixelScript = 'https://connect.facebook.net/en_US/fbevents.js';
 
 async function checkViewport(browser, engine, width) {
   const page = await browser.newPage({ viewport: { width, height: width <= 430 ? 780 : 900 }, reducedMotion: 'reduce' });
+  await page.route(pixelScript, route => route.fulfill({ contentType: 'application/javascript', body: '' }));
   const failures = [];
   page.on('pageerror', error => failures.push(error.message));
   page.on('console', message => {
@@ -126,8 +128,9 @@ async function accessibility(browser) {
 
 async function enquiry(browser) {
   const page = await browser.newPage({ viewport: { width: 390, height: 844 }, reducedMotion: 'reduce' });
+  await page.route(pixelScript, route => route.fulfill({ contentType: 'application/javascript', body: '' }));
   const external = [];
-  page.on('request', request => { if (!request.url().startsWith(base + '/')) external.push(request.url()); });
+  page.on('request', request => { if (request.url() !== pixelScript && !request.url().startsWith(base + '/')) external.push(request.url()); });
   try {
     await page.goto(base + '/?utm_source=qa&utm_medium=cpc&utm_campaign=civil-browser&gclid=qa-fixture&private=example.test', { waitUntil: 'networkidle' });
     await page.locator('.hero .button-outline').click();
@@ -164,15 +167,6 @@ async function enquiry(browser) {
     assert.equal(await form.getByLabel('City').inputValue(), 'QA City');
     assert.equal((await eventList(page)).filter(e => e.event === 'form_submit_success').length, 0);
     await page.unroute('**/api/enquiry');
-    const response = page.waitForResponse('**/api/enquiry');
-    await submit.click();
-    const accepted = await response;
-    assert.equal(accepted.status(), 201);
-    assert.match(accepted.request().postDataJSON().attribution.landing, /utm_campaign=civil-browser/);
-    assert.doesNotMatch(accepted.request().postDataJSON().attribution.landing, /private=|#enquire/);
-    await page.getByRole('heading', { name: 'Enquiry received.' }).waitFor();
-    assert.ok(await page.getByText('Your test enquiry is saved in this local preview.').isVisible());
-
     await page.evaluate(() => document.addEventListener('click', event => {
       if (event.target.closest('a[href^="tel:"], a[href^="https://wa.me/"]')) event.preventDefault();
     }));
@@ -183,6 +177,16 @@ async function enquiry(browser) {
     await phone.click();
     await whatsApp.click();
 
+    const response = page.waitForResponse('**/api/enquiry');
+    await submit.click();
+    const accepted = await response;
+    assert.equal(accepted.status(), 201);
+    assert.match(accepted.request().postDataJSON().attribution.landing, /utm_campaign=civil-browser/);
+    assert.doesNotMatch(accepted.request().postDataJSON().attribution.landing, /private=|#enquire/);
+    await page.waitForURL(url => url.pathname === '/thank-you');
+    await page.getByRole('heading', { name: 'Enquiry received.' }).waitFor();
+    assert.ok(await page.getByText('Your test enquiry is saved in this local preview.').isVisible());
+
     const data = await eventList(page);
     for (const name of ['course_page_view', 'curriculum_view', 'enquire_click', 'form_start', 'form_submit_success', 'phone_click', 'whatsapp_click']) {
       assert.equal(data.filter(e => e.event === name).length, 1, JSON.stringify(data));
@@ -191,11 +195,12 @@ async function enquiry(browser) {
     assert.ok(noAnalyticsPII(data));
     assert.deepEqual(external, []);
 
-    await page.reload({ waitUntil: 'networkidle' });
+    await page.goto(base, { waitUntil: 'networkidle' });
     await fill();
     const repeat = page.waitForResponse('**/api/enquiry');
     await submit.click();
     assert.equal((await repeat).status(), 200);
+    await page.waitForURL(url => url.pathname === '/thank-you');
     await page.getByRole('heading', { name: 'Enquiry already received.' }).waitFor();
     assert.equal((await eventList(page)).filter(e => e.event === 'form_submit_success').length, 0);
     console.log('PASS confirmed form, duplicate, invalid fields, pending/failure, contact and privacy-safe analytics');

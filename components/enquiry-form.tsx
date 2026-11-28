@@ -1,5 +1,6 @@
 'use client';
 
+import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { track } from '../lib/analytics';
 import { captureAttribution } from '../lib/attribution';
@@ -17,6 +18,7 @@ const fields = [
 ] as const;
 
 export function EnquiryForm() {
+  const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
   const attribution = useRef<ReturnType<typeof captureAttribution> | null>(null);
@@ -60,8 +62,13 @@ export function EnquiryForm() {
       });
       const outcome: Result = await response.json();
       if (response.ok && outcome.ok === true && typeof outcome.created === 'boolean') {
-        setResult(outcome);
         if (outcome.created) track('form_submit_success');
+        const confirmation = new URLSearchParams();
+        if (!outcome.created) confirmation.set('duplicate', '1');
+        if (outcome.local) confirmation.set('local', '1');
+        const query = confirmation.toString();
+        router.replace(query ? `/thank-you?${query}` : '/thank-you');
+        return;
       } else {
         track('form_submit_error', { reason: response.status === 422 ? 'validation' : response.status === 429 ? 'rate_limit' : 'delivery' });
         setResult({ message: outcome.message || 'We couldn’t confirm your enquiry. Please try again.', errors: outcome.errors });
@@ -69,19 +76,9 @@ export function EnquiryForm() {
     } catch {
       track('form_submit_error', { reason: 'delivery' });
       setResult({ message: 'We couldn’t confirm your enquiry. Check your connection and try again.' });
-    } finally {
-      inFlight.current = false;
-      setPending(false);
     }
-  }
-
-  if (result?.ok) {
-    return (
-      <div className="enquiry-card form-success" tabIndex={-1} ref={messageRef} role="status">
-        <h3>{result.created ? 'Enquiry received.' : 'Enquiry already received.'}</h3>
-        <p>{result.local ? 'Your test enquiry is saved in this local preview.' : 'VLS Law Academy has received your details for the Civil Procedure & Civil Trial module.'}</p>
-      </div>
-    );
+    inFlight.current = false;
+    setPending(false);
   }
 
   return (

@@ -20,7 +20,7 @@ export const viewport: Viewport = { width: 'device-width', initialScale: 1, view
 
 export default function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en-IN">
+    <html lang="en-IN" data-scroll-behavior="smooth">
       <body>
         <Script id="meta-pixel" strategy="afterInteractive">{`
           !function(f,b,e,v,n,t,s) {
